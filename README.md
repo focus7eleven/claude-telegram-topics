@@ -76,7 +76,7 @@ A **router daemon** auto-starts in the background when the first session launche
 
 - **Topics enabled** — Group Settings → Topics → turn on.
 - **Bot added as admin** — add your bot to the group, promote to admin.
-- **Privacy Mode disabled** _(optional)_ — BotFather → `/setprivacy` → Disable. Without this, the bot only sees @mentions and direct replies.
+- **Privacy Mode disabled** — BotFather → `/setprivacy` → Disable. Without this, Telegram's server-side filter only delivers @mentions and direct replies to the bot.
 
 **2. Find your group's chat ID.**
 
@@ -91,7 +91,11 @@ A **router daemon** auto-starts in the background when the first session launche
 /telegram-topics:configure group -100XXXXXXXXXX
 ```
 
-This saves the chat ID to `.env` and adds the group to the access list.
+This saves the chat ID to `.env` and adds the group to the access list. By default, the bot only responds to @mentions in the group. To respond to **all messages** (recommended for topic mode):
+
+```
+/telegram-topics:access group add -100XXXXXXXXXX --no-mention
+```
 
 **4. Find topic IDs.**
 
