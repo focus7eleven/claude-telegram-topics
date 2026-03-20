@@ -426,25 +426,31 @@ async function executeTool(
         )
       }
 
+      // grammy's multipart upload is broken in Bun (stream body hangs).
+      // Use native fetch + FormData instead.
       for (const f of files) {
         const ext = extname(f).toLowerCase()
-        // Read file into memory — Bun's fetch has bugs with streamed
-        // multipart uploads (grammy uses createReadStream → Readable.from).
         const bytes = readFileSync(f)
-        const input = new InputFile(bytes, f.split('/').pop()!)
-        const opts = {
-          ...(message_thread_id != null ? { message_thread_id } : {}),
-          ...(reply_to != null && replyMode !== 'off'
-            ? { reply_parameters: { message_id: reply_to } }
-            : {}),
+        const filename = f.split('/').pop()!
+        const isPhoto = PHOTO_EXTS.has(ext)
+        const method = isPhoto ? 'sendPhoto' : 'sendDocument'
+        const fieldName = isPhoto ? 'photo' : 'document'
+
+        const form = new FormData()
+        form.append('chat_id', chat_id)
+        form.append(fieldName, new Blob([bytes]), filename)
+        if (message_thread_id != null) form.append('message_thread_id', String(message_thread_id))
+        if (reply_to != null && replyMode !== 'off') {
+          form.append('reply_parameters', JSON.stringify({ message_id: reply_to }))
         }
-        if (PHOTO_EXTS.has(ext)) {
-          const sent = await bot.api.sendPhoto(chat_id, input, opts)
-          sentIds.push(sent.message_id)
-        } else {
-          const sent = await bot.api.sendDocument(chat_id, input, opts)
-          sentIds.push(sent.message_id)
-        }
+
+        const res = await fetch(
+          `https://api.telegram.org/bot${TOKEN}/${method}`,
+          { method: 'POST', body: form },
+        )
+        const data = (await res.json()) as { ok: boolean; result?: { message_id: number }; description?: string }
+        if (!data.ok) throw new Error(`${method} failed: ${data.description}`)
+        sentIds.push(data.result!.message_id)
       }
 
       const result =
