@@ -15,12 +15,19 @@
 import { Bot, InputFile } from 'grammy'
 import type { ReactionTypeEmoji } from 'grammy/types'
 import type { Context } from 'grammy'
-import { randomBytes } from 'crypto'
+import { randomBytes, createHash } from 'crypto'
 import {
   readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync,
   renameSync, realpathSync, statSync, unlinkSync, existsSync,
 } from 'fs'
 import { homedir } from 'os'
+
+// Router version — hash of this file's contents at startup.
+// Sessions compare this to decide whether to restart the router.
+const ROUTER_VERSION = createHash('md5')
+  .update(readFileSync(import.meta.path))
+  .digest('hex')
+  .slice(0, 8)
 import { join, extname, sep } from 'path'
 
 // ── Config ──────────────────────────────────────────────────────────────
@@ -795,6 +802,7 @@ Bun.serve({
     if (req.method === 'GET' && path === '/health') {
       return Response.json({
         ok: true,
+        version: ROUTER_VERSION,
         botUsername,
         uptime: process.uptime(),
         topics: Array.from(knownTopics.values()).map(t => ({

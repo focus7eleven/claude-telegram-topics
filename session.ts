@@ -18,7 +18,7 @@ import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
-import { randomBytes } from 'crypto'
+import { randomBytes, createHash } from 'crypto'
 import { spawn } from 'child_process'
 import { homedir } from 'os'
 import { join } from 'path'
@@ -223,26 +223,29 @@ async function connectSSE(): Promise<void> {
 
 // ── Lifecycle ───────────────────────────────────────────────────────────
 
-/** Check if the router is reachable. */
-async function isRouterRunning(): Promise<boolean> {
+/** Get the expected router version from the local router.ts file. */
+function expectedRouterVersion(): string {
   try {
-    const res = await routerFetch('/health')
-    return res.ok
+    const routerScript = join(import.meta.dir, 'router.ts')
+    return createHash('md5').update(readFileSync(routerScript)).digest('hex').slice(0, 8)
   } catch {
-    return false
+    return ''
   }
 }
 
-/** Auto-start router as a detached background process if not running. */
-async function ensureRouter(): Promise<void> {
-  if (await isRouterRunning()) {
-    process.stderr.write('telegram session: router already running\n')
-    return
+/** Check if the router is reachable. Returns its version or null. */
+async function getRouterHealth(): Promise<{ ok: boolean; version?: string } | null> {
+  try {
+    const res = await routerFetch('/health')
+    if (!res.ok) return null
+    return (await res.json()) as { ok: boolean; version?: string }
+  } catch {
+    return null
   }
+}
 
-  process.stderr.write('telegram session: starting router...\n')
-
-  // router.ts lives in the same directory as this file
+/** Start the router as a detached background process. */
+async function startRouter(): Promise<void> {
   const routerScript = join(import.meta.dir, 'router.ts')
   if (!existsSync(routerScript)) {
     throw new Error(`router.ts not found at ${routerScript}`)
@@ -258,13 +261,47 @@ async function ensureRouter(): Promise<void> {
   // Wait for router to be ready (up to 30s)
   for (let i = 0; i < 30; i++) {
     await new Promise(r => setTimeout(r, 1000))
-    if (await isRouterRunning()) {
+    const health = await getRouterHealth()
+    if (health?.ok) {
       process.stderr.write('telegram session: router started\n')
       return
     }
   }
 
   throw new Error('router failed to start within 30s')
+}
+
+/** Ensure router is running with the correct version. Restart if outdated. */
+async function ensureRouter(): Promise<void> {
+  const health = await getRouterHealth()
+
+  if (health?.ok) {
+    const expected = expectedRouterVersion()
+    if (expected && health.version && health.version !== expected) {
+      process.stderr.write(
+        `telegram session: router outdated (${health.version} → ${expected}), restarting...\n`,
+      )
+      // Read PID and kill old router
+      try {
+        const pidFile = join(STATE_DIR, 'router.pid')
+        const pid = parseInt(readFileSync(pidFile, 'utf8').trim(), 10)
+        process.kill(pid, 'SIGTERM')
+        // Wait for it to die
+        for (let i = 0; i < 10; i++) {
+          await new Promise(r => setTimeout(r, 500))
+          try { process.kill(pid, 0) } catch { break } // process gone
+        }
+      } catch {}
+      await startRouter()
+      return
+    }
+
+    process.stderr.write('telegram session: router already running\n')
+    return
+  }
+
+  process.stderr.write('telegram session: starting router...\n')
+  await startRouter()
 }
 
 async function start(): Promise<void> {
