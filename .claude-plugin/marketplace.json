@@ -11,7 +11,7 @@
       "name": "telegram-topics",
       "source": "./",
       "description": "Telegram channel for Claude Code — messaging bridge with built-in access control and topic-based session routing.",
-      "version": "0.1.0"
+      "version": "0.2.0"
     }
   ]
 }
