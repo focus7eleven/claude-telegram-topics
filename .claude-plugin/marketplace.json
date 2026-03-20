@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "telegram",
-      "source": ".",
+      "source": "./",
       "description": "Telegram channel for Claude Code — messaging bridge with built-in access control and topic-based session routing.",
       "version": "0.1.0"
     }
