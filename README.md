@@ -30,7 +30,7 @@ The official plugin provides the channel permission. Our plugin provides the act
 Open [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot`, copy the token.
 
 ```
-/telegram:configure 123456789:AAHfiqksKZ8...
+/telegram-topics:configure 123456789:AAHfiqksKZ8...
 ```
 
 ### Step 3: Start Claude Code with the channel
@@ -44,7 +44,7 @@ claude --channels plugin:telegram@claude-plugins-official
 DM your bot on Telegram — it replies with a 6-character code. In Claude Code:
 
 ```
-/telegram:access pair <code>
+/telegram-topics:access pair <code>
 ```
 
 Done. Your messages now reach the assistant.
@@ -54,7 +54,7 @@ Done. Your messages now reach the assistant.
 Switch to `allowlist` so strangers don't get pairing prompts:
 
 ```
-/telegram:access policy allowlist
+/telegram-topics:access policy allowlist
 ```
 
 ## Forum Topics (Multi-Session)
@@ -88,7 +88,7 @@ A **router daemon** auto-starts in the background when the first session launche
 **3. Configure the group.**
 
 ```
-/telegram:configure group -100XXXXXXXXXX
+/telegram-topics:configure group -100XXXXXXXXXX
 ```
 
 This saves the chat ID to `.env` and adds the group to the access list.
@@ -99,7 +99,7 @@ This saves the chat ID to `.env` and adds the group to the access list.
 | --- | --- |
 | **Topic link** | Right-click a topic → Copy Link. URL: `https://t.me/c/XXXXXXXXXX/42` — the last number (`42`) is the thread ID. |
 | **Topic name** | Use the topic name instead of numeric ID. The router resolves names after seeing at least one message in that topic. |
-| **`/telegram:configure topics`** | Lists all discovered topics with IDs and names. |
+| **`/telegram-topics:configure topics`** | Lists all discovered topics with IDs and names. |
 
 > **Note:** The "General" topic may not carry a thread ID in Bot API. Use named topics.
 
@@ -159,7 +159,7 @@ See **[ACCESS.md](./ACCESS.md)** for full documentation.
 Quick reference:
 - IDs are **numeric Telegram user IDs** ([@userinfobot](https://t.me/userinfobot))
 - Default DM policy: `pairing` → switch to `allowlist` after setup
-- Access managed via `/telegram:access` — never from channel messages
+- Access managed via `/telegram-topics:access` — never from channel messages
 
 ## Limitations
 

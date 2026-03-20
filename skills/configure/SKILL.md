@@ -10,7 +10,7 @@ allowed-tools:
   - Bash(curl *)
 ---
 
-# /telegram:configure — Telegram Channel Setup
+# /telegram-topics:configure — Telegram Channel Setup
 
 Writes config to `~/.claude/channels/telegram/.env` and orients the
 user on access policy. The server reads this file at boot.
@@ -46,10 +46,10 @@ Read both state files and give the user a complete picture:
    Show router status, connected sessions, and discovered topics.
 
 5. **What next** — end with a concrete next step based on state:
-   - No token → *"Run `/telegram:configure <token>` with the token from
+   - No token → *"Run `/telegram-topics:configure <token>` with the token from
      BotFather."*
    - Token set, nobody allowed → *"DM your bot on Telegram. It replies with
-     a code; approve with `/telegram:access pair <code>`."*
+     a code; approve with `/telegram-topics:access pair <code>`."*
    - Token set, someone allowed → *"Ready. Start with
      `claude --channels plugin:telegram@<marketplace>`."*
 
@@ -70,7 +70,7 @@ to switch to `allowlist`.
 1. Save `TELEGRAM_CHAT_ID=<chat_id>` to `.env` (update if exists, preserve
    other keys).
 2. Also add the group to `access.json` if not already there (same as
-   `/telegram:access group add <chat_id>`).
+   `/telegram-topics:access group add <chat_id>`).
 3. Explain:
    - *"Multi-topic mode enabled. Each forum topic can now have its own Claude
      Code session."*
@@ -78,7 +78,7 @@ to switch to `allowlist`.
      `TELEGRAM_TOPIC_ID=<id-or-name> claude --channels plugin:telegram@<marketplace>`"*
    - *"The router starts automatically — no manual setup needed."*
    - *"To discover topic IDs, send a message in each topic, then run
-     `/telegram:configure` to see them."*
+     `/telegram-topics:configure` to see them."*
 
 ### `topics` — show discovered topics
 
