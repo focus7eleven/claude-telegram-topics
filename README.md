@@ -7,34 +7,59 @@ Supports DMs, group chats, and **forum topics** — each topic can route to a se
 ## Prerequisites
 
 - [Bun](https://bun.sh) — `curl -fsSL https://bun.sh/install | bash`
+- Claude Code v1.0.33+
 
-## Quick Start
+## Installation
 
-### 1. Create a bot
+Claude Code's channel allowlist currently only permits plugins from the official marketplace (`claude-plugins-official`). Since this plugin is distributed through a self-hosted marketplace, you need to install **both** the official telegram plugin (for allowlist access) and this plugin (for the actual code).
 
-Open [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot`. Copy the token (`123456789:AAHfiqksKZ8...`).
+### Step 1: Install the official telegram plugin
 
-### 2. Install the plugin
+This gives your Claude Code session the `plugin:telegram@claude-plugins-official` channel permission.
 
 ```
 /plugin install telegram@claude-plugins-official
 ```
 
-### 3. Configure the token
+### Step 2: Add this marketplace and install the plugin
+
+```
+/plugin marketplace add focus7eleven/claude-telegram-topics
+/plugin install telegram@claude-telegram-topics
+```
+
+### Step 3: Link the code
+
+The official plugin's cached code needs to be replaced with ours. Run this once in your terminal:
+
+```bash
+SRC=~/.claude/plugins/cache/claude-telegram-topics/telegram/0.1.0
+DST=~/.claude/plugins/cache/claude-plugins-official/telegram/0.0.1
+
+for f in server.ts session.ts router.ts; do
+  cp "$SRC/$f" "$DST/$f"
+done
+```
+
+> **Note:** This step is needed after every plugin update. When we get accepted into the official marketplace, this entire workaround goes away — you'll just `/plugin install telegram@claude-plugins-official` and be done.
+
+### Step 4: Create a bot and configure the token
+
+Open [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot`, copy the token.
 
 ```
 /telegram:configure 123456789:AAHfiqksKZ8...
 ```
 
-### 4. Start Claude Code with the channel
+### Step 5: Start Claude Code with the channel
 
 ```sh
 claude --channels plugin:telegram@claude-plugins-official
 ```
 
-### 5. Pair
+### Step 6: Pair
 
-DM your bot — it replies with a 6-character code. In Claude Code:
+DM your bot on Telegram — it replies with a 6-character code. In Claude Code:
 
 ```
 /telegram:access pair <code>
@@ -42,7 +67,7 @@ DM your bot — it replies with a 6-character code. In Claude Code:
 
 Done. Your messages now reach the assistant.
 
-### 6. Lock down
+### Step 7: Lock down
 
 Switch to `allowlist` so strangers don't get pairing prompts:
 
@@ -61,7 +86,7 @@ Telegram Group
 └── DMs               → Claude Code session C (catch-all)
 ```
 
-A **router daemon** auto-starts in the background when the first session launches. Subsequent sessions connect to it. No manual daemon management.
+A **router daemon** auto-starts in the background when the first session launches. Subsequent sessions connect to it automatically. No manual daemon management.
 
 ### Setup
 
@@ -99,14 +124,29 @@ This saves the chat ID to `.env` and adds the group to the access list.
 **5. Start sessions.**
 
 ```sh
-# Specific topic
+# Specific topic (by ID or name)
 TELEGRAM_TOPIC_ID=42 claude --channels plugin:telegram@claude-plugins-official
-
-# By topic name
 TELEGRAM_TOPIC_ID=my-topic claude --channels plugin:telegram@claude-plugins-official
 
 # Catch-all (DMs + all unmatched topics)
 claude --channels plugin:telegram@claude-plugins-official
+```
+
+### Auto-allow tool permissions
+
+To avoid being prompted for permission on every reply, add this to `~/.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_telegram_telegram__reply",
+      "mcp__plugin_telegram_telegram__react",
+      "mcp__plugin_telegram_telegram__edit_message",
+      "mcp__plugin_telegram_telegram__create_forum_topic"
+    ]
+  }
+}
 ```
 
 ### Environment Variables
@@ -138,31 +178,6 @@ Quick reference:
 - IDs are **numeric Telegram user IDs** ([@userinfobot](https://t.me/userinfobot))
 - Default DM policy: `pairing` → switch to `allowlist` after setup
 - Access managed via `/telegram:access` — never from channel messages
-
-## Development
-
-For local development, the channel allowlist only accepts `claude-plugins-official`. To test changes locally:
-
-```bash
-# 1. Install the official plugin (for allowlist)
-/plugin install telegram@claude-plugins-official
-
-# 2. Copy your code into the official plugin cache
-CACHE=~/.claude/plugins/cache/claude-plugins-official/telegram/0.0.1
-cp server.ts session.ts router.ts "$CACHE/"
-
-# 3. Start with official channel name
-claude --channels plugin:telegram@claude-plugins-official
-```
-
-Or use symlinks for live-reload during development:
-
-```bash
-CACHE=~/.claude/plugins/cache/claude-plugins-official/telegram/0.0.1
-for f in server.ts session.ts router.ts; do
-  ln -sf "$(pwd)/$f" "$CACHE/$f"
-done
-```
 
 ## Limitations
 
