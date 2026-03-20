@@ -147,17 +147,19 @@ export function resolveTopicId(chatId: string, topicIdOrName: string): string {
 /** Find the session that should handle a message for the given chat + topic. */
 export function findSession(chatId: string, topicId?: number): Session | undefined {
   const tid = String(topicId ?? 0)
+  // Only match sessions that have an active SSE connection
+  const connected = (s: Session) => s.controller !== null
   // 1. Exact match: chatId + topicId
   for (const s of sessions.values()) {
-    if (s.chatId === chatId && s.topicId === tid) return s
+    if (connected(s) && s.chatId === chatId && s.topicId === tid) return s
   }
   // 2. Chat catch-all: chatId + *
   for (const s of sessions.values()) {
-    if (s.chatId === chatId && s.topicId === '*') return s
+    if (connected(s) && s.chatId === chatId && s.topicId === '*') return s
   }
   // 3. Global catch-all: * + *
   for (const s of sessions.values()) {
-    if (s.chatId === '*' && s.topicId === '*') return s
+    if (connected(s) && s.chatId === '*' && s.topicId === '*') return s
   }
   return undefined
 }
@@ -676,6 +678,13 @@ Bun.serve({
       }
       // Resolve topic name → ID if needed
       const resolvedTopicId = topicId ? resolveTopicId(chatId, topicId) : '*'
+      // Clean up stale disconnected sessions with the same route
+      for (const [id, s] of sessions) {
+        if (s.chatId === chatId && s.topicId === resolvedTopicId && !s.controller) {
+          sessions.delete(id)
+          process.stderr.write(`telegram router: purged stale ${id}\n`)
+        }
+      }
       sessions.set(sessionId, {
         id: sessionId,
         chatId,
