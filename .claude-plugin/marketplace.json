@@ -1,0 +1,17 @@
+{
+  "name": "claude-telegram-topics",
+  "owner": {
+    "name": "takumi"
+  },
+  "metadata": {
+    "description": "Telegram channel plugin for Claude Code with forum topic routing"
+  },
+  "plugins": [
+    {
+      "name": "telegram",
+      "source": ".",
+      "description": "Telegram channel for Claude Code — messaging bridge with built-in access control and topic-based session routing.",
+      "version": "0.1.0"
+    }
+  ]
+}

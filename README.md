@@ -1,105 +1,174 @@
-# Telegram
+# Telegram Channel for Claude Code
 
-Connect a Telegram bot to your Claude Code with an MCP server.
+Connect a Telegram bot to Claude Code. Messages to the bot are forwarded to your Claude Code session; Claude replies through the bot.
 
-The MCP server logs into Telegram as a bot and provides tools to Claude to reply, react, or edit messages. When you message the bot, the server forwards the message to your Claude Code session.
+Two modes:
+
+- **Standalone** — one bot, one Claude Code session. Install and go.
+- **Routed** — one bot, multiple Claude Code sessions. Each session handles a specific forum topic. Requires a router daemon.
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) — the MCP server runs on Bun. Install with `curl -fsSL https://bun.sh/install | bash`.
+- [Bun](https://bun.sh) — `curl -fsSL https://bun.sh/install | bash`
 
-## Quick Setup
-> Default pairing flow for a single-user DM bot. See [ACCESS.md](./ACCESS.md) for groups and multi-user setups.
+## Quick Start (Standalone)
 
-**1. Create a bot with BotFather.**
+> Default setup for a single-user DM bot. See [ACCESS.md](./ACCESS.md) for groups and multi-user configuration.
 
-Open a chat with [@BotFather](https://t.me/BotFather) on Telegram and send `/newbot`. BotFather asks for two things:
+### 1. Create a bot
 
-- **Name** — the display name shown in chat headers (anything, can contain spaces)
-- **Username** — a unique handle ending in `bot` (e.g. `my_assistant_bot`). This becomes your bot's link: `t.me/my_assistant_bot`.
+Open [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot`. You'll get a token like `123456789:AAHfiqksKZ8...` — copy it.
 
-BotFather replies with a token that looks like `123456789:AAHfiqksKZ8...` — that's the whole token, copy it including the leading number and colon.
+### 2. Install the plugin
 
-**2. Install the plugin.**
-
-These are Claude Code commands — run `claude` to start a session first.
-
-Install the plugin:
 ```
 /plugin install telegram@claude-plugins-official
 ```
 
-**3. Give the server the token.**
+### 3. Configure the token
 
 ```
 /telegram:configure 123456789:AAHfiqksKZ8...
 ```
 
-Writes `TELEGRAM_BOT_TOKEN=...` to `.claude/channels/telegram/.env` in your project. You can also write that file by hand, or set the variable in your shell environment — shell takes precedence.
+Saves the token to `~/.claude/channels/telegram/.env`.
 
-**4. Relaunch with the channel flag.**
-
-The server won't connect without this — exit your session and start a new one:
+### 4. Start Claude Code with the channel
 
 ```sh
 claude --channels plugin:telegram@claude-plugins-official
 ```
 
-**5. Pair.**
+### 5. Pair
 
-With Claude Code running from the previous step, DM your bot on Telegram — it replies with a 6-character pairing code. If the bot doesn't respond, make sure your session is running with `--channels`. In your Claude Code session:
+DM your bot on Telegram — it replies with a 6-character code. In Claude Code:
 
 ```
 /telegram:access pair <code>
 ```
 
-Your next DM reaches the assistant.
+Done. Your messages now reach the assistant.
 
-> Unlike Discord, there's no server invite step — Telegram bots accept DMs immediately. Pairing handles the user-ID lookup so you never touch numeric IDs.
+### 6. Lock down
 
-**6. Lock it down.**
+Once paired, switch to `allowlist` mode so strangers don't get pairing prompts:
 
-Pairing is for capturing IDs. Once you're in, switch to `allowlist` so strangers don't get pairing-code replies. Ask Claude to do it, or `/telegram:access policy allowlist` directly.
+```
+/telegram:access policy allowlist
+```
 
-## Access control
+## Multi-Topic Mode (Routed)
 
-See **[ACCESS.md](./ACCESS.md)** for DM policies, groups, mention detection, delivery config, skill commands, and the `access.json` schema.
+For forum-enabled Telegram groups where each topic maps to a separate Claude Code session:
 
-Quick reference: IDs are **numeric user IDs** (get yours from [@userinfobot](https://t.me/userinfobot)). Default policy is `pairing`. `ackReaction` only accepts Telegram's fixed emoji whitelist.
+```
+Telegram Group
+├── Topic: project-a/main  → Claude Code session A
+├── Topic: project-a/dev   → Claude Code session B
+└── Topic: project-b/main  → Claude Code session C
+```
 
-## Tools exposed to the assistant
+### Setup
 
-| Tool | Purpose |
+**1. Prepare the group.**
+
+Your Telegram group needs a few settings:
+
+- **Topics enabled** — Group Settings → Topics → turn on.
+- **Bot added as admin** — add your bot to the group, then promote to admin (at minimum `can_manage_topics`).
+- **Privacy Mode disabled** _(optional)_ — BotFather → `/setprivacy` → Disable. Without this, the bot only sees `@mentions` and direct replies, which is fine for most use cases.
+
+**2. Find your group's chat ID.**
+
+Three ways, pick whichever is easiest:
+
+| Method | How |
 | --- | --- |
-| `reply` | Send to a chat. Takes `chat_id` + `text`, optionally `reply_to` (message ID) for native threading, `message_thread_id` for forum topics, and `files` (absolute paths) for attachments. Images (`.jpg`/`.png`/`.gif`/`.webp`) send as photos with inline preview; other types send as documents. Max 50MB each. Auto-chunks text; files send as separate messages after the text. Returns the sent message ID(s). |
-| `react` | Add an emoji reaction to a message by ID. **Only Telegram's fixed whitelist** is accepted (👍 👎 ❤ 🔥 👀 etc). |
-| `edit_message` | Edit a message the bot previously sent. Useful for "working…" → result progress updates. Only works on the bot's own messages. |
-| `create_forum_topic` | Create a new topic in a forum-enabled supergroup or private chat. The bot needs `can_manage_topics` admin rights in supergroups. Returns the topic info including `message_thread_id`. |
+| **Telegram Web** | Open the group in [web.telegram.org](https://web.telegram.org). The URL looks like `https://web.telegram.org/a/#-100XXXXXXXXXX`. The number after `#` (including the `-`) is your chat ID. |
+| **@RawDataBot** | Add [@RawDataBot](https://t.me/RawDataBot) to the group, send any message, it replies with the chat ID. Remove the bot afterwards. |
+| **Router log** | If you already have a session running, `@mention` your bot in the group. The router logs `inbound supergroup -100XXXXXXXXXX ...` — that's the chat ID. |
 
-Inbound messages trigger a typing indicator automatically — Telegram shows
-"botname is typing…" while the assistant works on a response.
+**3. Configure the group in Claude Code.**
 
-## Forum topics
+```
+/telegram:configure group -100XXXXXXXXXX
+```
 
-Telegram's [forum topics](https://telegram.org/blog/topics-in-groups-collectible-usernames) are supported. When a message arrives from a forum-enabled chat, the `<channel>` notification includes `message_thread_id` and `is_topic_message` attributes. Pass `message_thread_id` back to the `reply` tool so responses land in the correct topic.
+This saves the chat ID and adds the group to the access list in one step.
 
-This works in both **supergroups** (Bot API 6.3+) and **private chats** with the bot's topic mode enabled (Bot API 9.3+). For supergroups, the bot must be an administrator with `can_manage_topics` rights to create topics; reading and replying within existing topics requires no special permissions.
+**4. Find topic IDs.**
 
-Use `create_forum_topic` to create new topics programmatically.
+Each forum topic has a numeric thread ID. Three ways to find them:
+
+| Method | How |
+| --- | --- |
+| **Topic link** | Right-click a topic → Copy Link. The URL looks like `https://t.me/c/XXXXXXXXXX/42`. The last number (`42`) is the thread ID. |
+| **Topic name** | You can use the topic name instead of the numeric ID. The router resolves names automatically after seeing at least one message in that topic. |
+| **`/telegram:configure topics`** | After sending a message in each topic, run this skill. It queries the router and shows a table of all discovered topics with their IDs and names. |
+
+> **Note:** The "General" topic may not carry a thread ID in Bot API. Always use named topics.
+
+**5. Start Claude Code sessions** (one per topic):
+
+```sh
+# By topic ID
+TELEGRAM_TOPIC_ID=42 claude --channels plugin:telegram@<marketplace>
+
+# By topic name (easier to remember)
+TELEGRAM_TOPIC_ID=my-topic claude --channels plugin:telegram@<marketplace>
+
+# Catch-all (receive messages from ALL topics)
+TELEGRAM_TOPIC_ID='*' claude --channels plugin:telegram@<marketplace>
+```
+
+The **first session auto-starts a router daemon** in the background. Subsequent sessions connect to it automatically. No manual daemon management.
+
+**6. Verify.**
+
+```
+/telegram:configure topics
+```
+
+Shows discovered topics, connected sessions, and router status.
+
+### Environment Variables
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `TELEGRAM_BOT_TOKEN` | Yes | Bot token from BotFather |
+| `TELEGRAM_CHAT_ID` | Routed mode | Group chat ID (triggers routed mode) |
+| `TELEGRAM_TOPIC_ID` | Routed mode | Topic thread ID, name, or `*` for catch-all |
+| `TELEGRAM_SESSION_LABEL` | No | Human-readable label for this session |
+| `TELEGRAM_STATE_DIR` | No | Override state directory (default: `~/.claude/channels/telegram`) |
+| `TELEGRAM_ACCESS_MODE` | No | Set to `static` to snapshot access at boot |
+
+Variables can be set in the shell, in `~/.claude/channels/telegram/.env`, or both. Shell takes precedence.
+
+## Tools
+
+| Tool | Description |
+| --- | --- |
+| `reply` | Send text/files to a chat. Supports `reply_to` for threading, `message_thread_id` for forum topics, `files` for attachments (images inline, others as documents, max 50 MB). Auto-chunks text at 4096 chars. |
+| `react` | Add emoji reaction. Only Telegram's fixed whitelist. |
+| `edit_message` | Edit a previously sent message. |
+| `create_forum_topic` | Create a topic in a forum-enabled chat. Requires `can_manage_topics` admin right. |
+
+## Access Control
+
+See **[ACCESS.md](./ACCESS.md)** for full documentation on DM policies, group management, mention detection, and delivery configuration.
+
+Quick reference:
+- IDs are **numeric Telegram user IDs** (get yours from [@userinfobot](https://t.me/userinfobot))
+- Default DM policy: `pairing` (issues 6-char codes, 1h expiry)
+- Ack reactions only accept Telegram's fixed emoji whitelist
+- Access is managed via `/telegram:access` — never from channel messages (prompt injection protection)
 
 ## Photos
 
-Inbound photos are downloaded to `~/.claude/channels/telegram/inbox/` and the
-local path is included in the `<channel>` notification so the assistant can
-`Read` it. Telegram compresses photos — if you need the original file, send it
-as a document instead (long-press → Send as File).
+Inbound photos are downloaded to `~/.claude/channels/telegram/inbox/`. The path is included in the notification so the assistant can `Read` it. Telegram compresses photos — send as a document (long-press → Send as File) for originals.
 
-## No history or search
+## Limitations
 
-Telegram's Bot API exposes **neither** message history nor search. The bot
-only sees messages as they arrive — no `fetch_messages` tool exists. If the
-assistant needs earlier context, it will ask you to paste or summarize.
-
-This also means there's no `download_attachment` tool for historical messages
-— photos are downloaded eagerly on arrival since there's no way to fetch them
-later.
+- **No history or search** — Telegram's Bot API has no message history endpoint. The bot only sees messages as they arrive.
+- **General topic** — The default "General" topic in forum groups may not include `message_thread_id` in Bot API responses. Use named topics.
+- **Single bot token** — Only one process can long-poll a bot token. In routed mode, the router holds the token; in standalone mode, the MCP server holds it. Don't run both simultaneously with the same token.

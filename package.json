@@ -5,7 +5,10 @@
   "type": "module",
   "bin": "./server.ts",
   "scripts": {
-    "start": "bun install --no-summary && bun server.ts"
+    "start": "bun install --no-summary && bun server.ts",
+    "router": "bun install --no-summary && bun router.ts",
+    "router:status": "curl --unix-socket ${TELEGRAM_STATE_DIR:-$HOME/.claude/channels/telegram}/router.sock http://localhost/health 2>/dev/null | bun -e 'process.stdin.pipe(process.stdout)'",
+    "router:topics": "curl --unix-socket ${TELEGRAM_STATE_DIR:-$HOME/.claude/channels/telegram}/router.sock http://localhost/topics 2>/dev/null | bun -e 'process.stdin.pipe(process.stdout)'"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
