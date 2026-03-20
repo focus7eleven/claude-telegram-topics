@@ -678,11 +678,14 @@ Bun.serve({
       }
       // Resolve topic name → ID if needed
       const resolvedTopicId = topicId ? resolveTopicId(chatId, topicId) : '*'
-      // Clean up stale disconnected sessions with the same route
+      // Clean up ALL old sessions with the same route (connected or not).
+      // On resume, Claude Code spawns a new MCP process with a new session ID
+      // while the old process may still be alive with an active SSE connection.
       for (const [id, s] of sessions) {
-        if (s.chatId === chatId && s.topicId === resolvedTopicId && !s.controller) {
+        if (id !== sessionId && s.chatId === chatId && s.topicId === resolvedTopicId) {
+          try { s.controller?.close() } catch {}
           sessions.delete(id)
-          process.stderr.write(`telegram router: purged stale ${id}\n`)
+          process.stderr.write(`telegram router: replaced ${id}\n`)
         }
       }
       sessions.set(sessionId, {
