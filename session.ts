@@ -127,15 +127,16 @@ const mcp = new Server(
 let cachedTools: unknown[] | null = null
 
 mcp.setRequestHandler(ListToolsRequestSchema, async () => {
-  if (!cachedTools) {
+  // Don't cache empty results — retry until router is ready
+  if (!cachedTools || cachedTools.length === 0) {
     try {
-      cachedTools = await fetchToolSchemas()
+      const tools = await fetchToolSchemas()
+      if (tools.length > 0) cachedTools = tools
     } catch {
-      cachedTools = []
       process.stderr.write('telegram session: failed to fetch tool schemas from router\n')
     }
   }
-  return { tools: cachedTools }
+  return { tools: cachedTools ?? [] }
 })
 
 mcp.setRequestHandler(CallToolRequestSchema, async req => {
