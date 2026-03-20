@@ -421,7 +421,10 @@ async function executeTool(
 
       for (const f of files) {
         const ext = extname(f).toLowerCase()
-        const input = new InputFile(f)
+        // Read file into memory — Bun's fetch has bugs with streamed
+        // multipart uploads (grammy uses createReadStream → Readable.from).
+        const bytes = readFileSync(f)
+        const input = new InputFile(bytes, f.split('/').pop()!)
         const opts = {
           ...(message_thread_id != null ? { message_thread_id } : {}),
           ...(reply_to != null && replyMode !== 'off'
