@@ -280,7 +280,7 @@ async function ensureRouter(): Promise<void> {
 
   if (health?.ok) {
     const expected = expectedRouterVersion()
-    if (expected && health.version && health.version !== expected) {
+    if (expected && health.version !== expected) {
       process.stderr.write(
         `telegram session: router outdated (${health.version} → ${expected}), restarting...\n`,
       )
