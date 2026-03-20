@@ -6,9 +6,9 @@
  * for a specific chat + topic. Each Claude Code session runs one instance.
  *
  * Env:
- *   TELEGRAM_CHAT_ID        — chat to handle (required, triggers routed mode)
- *   TELEGRAM_TOPIC_ID       — topic to handle (default: "*" for all in chat)
- *   TELEGRAM_SESSION_LABEL  — human-readable label (default: chatId:topicId)
+ *   TELEGRAM_CHAT_ID        — restrict to this chat (default: "*" for all chats)
+ *   TELEGRAM_TOPIC_ID       — restrict to this topic (default: "*" for all topics)
+ *   TELEGRAM_SESSION_LABEL  — human-readable label
  *   TELEGRAM_STATE_DIR      — state dir (default: ~/.claude/channels/telegram)
  */
 
@@ -38,15 +38,10 @@ try {
   }
 } catch {}
 
-const CHAT_ID = process.env.TELEGRAM_CHAT_ID!
+const CHAT_ID = process.env.TELEGRAM_CHAT_ID ?? '*'
 const TOPIC_ID = process.env.TELEGRAM_TOPIC_ID ?? '*'
-const SESSION_LABEL = process.env.TELEGRAM_SESSION_LABEL ?? `${CHAT_ID}:${TOPIC_ID}`
+const SESSION_LABEL = process.env.TELEGRAM_SESSION_LABEL ?? (CHAT_ID === '*' ? 'catch-all' : `${CHAT_ID}:${TOPIC_ID}`)
 const SESSION_ID = `s-${randomBytes(4).toString('hex')}`
-
-if (!CHAT_ID) {
-  process.stderr.write('telegram session: TELEGRAM_CHAT_ID required in routed mode\n')
-  process.exit(1)
-}
 
 // ── Router Client ───────────────────────────────────────────────────────
 

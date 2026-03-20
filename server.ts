@@ -2,19 +2,21 @@
 /**
  * Telegram channel for Claude Code — entry point.
  *
- * Mode detection:
- *   - TELEGRAM_CHAT_ID set → routed mode (session.ts, requires router.ts daemon)
- *   - Otherwise            → standalone mode (standalone.ts, runs bot directly)
+ * Loads .env, then starts a routed session that connects to the router daemon.
+ * The router auto-starts in the background if not already running.
  *
- * STATE_DIR is configurable via TELEGRAM_STATE_DIR env var
- * (default: ~/.claude/channels/telegram).
+ * Env (all optional except token):
+ *   TELEGRAM_BOT_TOKEN     — bot token (required)
+ *   TELEGRAM_CHAT_ID       — restrict to this chat (optional, default: all chats)
+ *   TELEGRAM_TOPIC_ID      — restrict to this topic (optional, default: all topics)
+ *   TELEGRAM_STATE_DIR     — state directory (default: ~/.claude/channels/telegram)
  */
 
 import { readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 
-// Load .env BEFORE mode detection so TELEGRAM_CHAT_ID can be set there.
+// Load .env before session starts.
 const STATE_DIR = process.env.TELEGRAM_STATE_DIR ?? join(homedir(), '.claude', 'channels', 'telegram')
 const ENV_FILE = join(STATE_DIR, '.env')
 try {
@@ -24,8 +26,4 @@ try {
   }
 } catch {}
 
-if (process.env.TELEGRAM_CHAT_ID) {
-  await import('./session.ts')
-} else {
-  await import('./standalone.ts')
-}
+await import('./session.ts')

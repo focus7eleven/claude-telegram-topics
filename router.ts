@@ -147,13 +147,17 @@ export function resolveTopicId(chatId: string, topicIdOrName: string): string {
 /** Find the session that should handle a message for the given chat + topic. */
 export function findSession(chatId: string, topicId?: number): Session | undefined {
   const tid = String(topicId ?? 0)
-  // Exact match first
+  // 1. Exact match: chatId + topicId
   for (const s of sessions.values()) {
     if (s.chatId === chatId && s.topicId === tid) return s
   }
-  // Catch-all for the chat
+  // 2. Chat catch-all: chatId + *
   for (const s of sessions.values()) {
     if (s.chatId === chatId && s.topicId === '*') return s
+  }
+  // 3. Global catch-all: * + *
+  for (const s of sessions.values()) {
+    if (s.chatId === '*' && s.topicId === '*') return s
   }
   return undefined
 }

@@ -47,16 +47,20 @@ class SessionRegistry {
     return this.sessions.get(id)
   }
 
-  /** Find session for a given chat + topic. Exact match first, then catch-all. */
+  /** Find session for a given chat + topic. Exact > chat catch-all > global catch-all. */
   findSession(chatId: string, topicId?: number): Session | undefined {
     const tid = String(topicId ?? 0)
-    // Exact match
+    // 1. Exact match: chatId + topicId
     for (const s of this.sessions.values()) {
       if (s.chatId === chatId && s.topicId === tid) return s
     }
-    // Catch-all
+    // 2. Chat catch-all: chatId + *
     for (const s of this.sessions.values()) {
       if (s.chatId === chatId && s.topicId === '*') return s
+    }
+    // 3. Global catch-all: * + *
+    for (const s of this.sessions.values()) {
+      if (s.chatId === '*' && s.topicId === '*') return s
     }
     return undefined
   }
@@ -175,11 +179,42 @@ describe('topic routing', () => {
     expect(registry.findSession('-200', 42)?.id).toBe('s-b')
   })
 
-  test('catch-all does not cross chat boundaries', () => {
+  test('chat catch-all does not cross chat boundaries', () => {
     registry.register('s-all', '-100', '*', 'catch-all-100')
 
     expect(registry.findSession('-100', 42)?.id).toBe('s-all')
     expect(registry.findSession('-200', 42)).toBeUndefined()
+  })
+
+  test('global catch-all matches any chat and topic', () => {
+    registry.register('s-global', '*', '*', 'global')
+
+    expect(registry.findSession('-100', 42)?.id).toBe('s-global')
+    expect(registry.findSession('-200', 99)?.id).toBe('s-global')
+    expect(registry.findSession('12345', undefined)?.id).toBe('s-global')
+  })
+
+  test('exact match > chat catch-all > global catch-all', () => {
+    registry.register('s-global', '*', '*', 'global')
+    registry.register('s-chat', '-100', '*', 'chat-100')
+    registry.register('s-exact', '-100', '42', 'exact')
+
+    // Exact match wins
+    expect(registry.findSession('-100', 42)?.id).toBe('s-exact')
+    // Chat catch-all wins over global
+    expect(registry.findSession('-100', 99)?.id).toBe('s-chat')
+    // Global catch-all for unknown chat
+    expect(registry.findSession('-200', 42)?.id).toBe('s-global')
+  })
+
+  test('DM with no env vars routes to global catch-all', () => {
+    // Simulates: user starts Claude Code with no TELEGRAM_CHAT_ID
+    registry.register('s-dm', '*', '*', 'catch-all')
+
+    // DM (private chat, no topic)
+    expect(registry.findSession('12345', undefined)?.id).toBe('s-dm')
+    // Group message also matches
+    expect(registry.findSession('-100', 42)?.id).toBe('s-dm')
   })
 
   test('multiple topics in same chat', () => {
