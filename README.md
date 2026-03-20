@@ -13,37 +13,19 @@ Supports DMs, group chats, and **forum topics** — each topic can route to a se
 
 Claude Code's channel allowlist currently only permits plugins from the official marketplace (`claude-plugins-official`). Since this plugin is distributed through a self-hosted marketplace, you need to install **both** the official telegram plugin (for allowlist access) and this plugin (for the actual code).
 
-### Step 1: Install the official telegram plugin
-
-This gives your Claude Code session the `plugin:telegram@claude-plugins-official` channel permission.
+### Step 1: Install both plugins
 
 ```
 /plugin install telegram@claude-plugins-official
-```
-
-### Step 2: Add this marketplace and install the plugin
-
-```
 /plugin marketplace add focus7eleven/claude-telegram-topics
 /plugin install telegram@claude-telegram-topics
 ```
 
-### Step 3: Link the code
+The official plugin provides the channel permission. Our plugin provides the actual code and automatically patches the official plugin's cache on every session start — no manual steps needed.
 
-The official plugin's cached code needs to be replaced with ours. Run this once in your terminal:
+> **Why two plugins?** Claude Code's channel allowlist only permits plugins from the official marketplace. Until this plugin is accepted there, we need the official plugin as a shim. Once accepted, you'll only need one install.
 
-```bash
-SRC=~/.claude/plugins/cache/claude-telegram-topics/telegram/0.1.0
-DST=~/.claude/plugins/cache/claude-plugins-official/telegram/0.0.1
-
-for f in server.ts session.ts router.ts; do
-  cp "$SRC/$f" "$DST/$f"
-done
-```
-
-> **Note:** This step is needed after every plugin update. When we get accepted into the official marketplace, this entire workaround goes away — you'll just `/plugin install telegram@claude-plugins-official` and be done.
-
-### Step 4: Create a bot and configure the token
+### Step 2: Create a bot and configure the token
 
 Open [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot`, copy the token.
 
@@ -51,13 +33,13 @@ Open [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot`, copy the 
 /telegram:configure 123456789:AAHfiqksKZ8...
 ```
 
-### Step 5: Start Claude Code with the channel
+### Step 3: Start Claude Code with the channel
 
 ```sh
 claude --channels plugin:telegram@claude-plugins-official
 ```
 
-### Step 6: Pair
+### Step 4: Pair
 
 DM your bot on Telegram — it replies with a 6-character code. In Claude Code:
 
@@ -67,7 +49,7 @@ DM your bot on Telegram — it replies with a 6-character code. In Claude Code:
 
 Done. Your messages now reach the assistant.
 
-### Step 7: Lock down
+### Step 5: Lock down
 
 Switch to `allowlist` so strangers don't get pairing prompts:
 
