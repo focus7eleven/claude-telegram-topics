@@ -157,6 +157,9 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
 async function connectSSE(): Promise<void> {
   while (true) {
     try {
+      // Re-register on every reconnect — router may have restarted
+      await register()
+
       const res = await routerFetch(`/events/${encodeURIComponent(SESSION_ID)}`)
       if (!res.ok || !res.body) {
         throw new Error(`SSE connect failed: ${res.status}`)
