@@ -268,14 +268,14 @@ async function ensureRouter(): Promise<void> {
 }
 
 async function start(): Promise<void> {
-  // Connect MCP transport (stdio)
-  await mcp.connect(new StdioServerTransport())
-
-  // Ensure router is running (auto-start if needed)
+  // Ensure router is running BEFORE connecting MCP.
+  // Claude Code requests ListTools immediately on connect,
+  // so the router must be ready to serve tool schemas.
   await ensureRouter()
-
-  // Register with router
   await register()
+
+  // Now connect MCP — tools will be available when Claude asks
+  await mcp.connect(new StdioServerTransport())
 
   // Start SSE event stream (runs forever, auto-reconnects)
   void connectSSE()
